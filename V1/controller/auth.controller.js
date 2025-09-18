@@ -14,13 +14,11 @@ exports.login = async (req, res) => {
     const userData = await users.findOne({ email: email });
 
     if (!userData || userData.isDeleted) {
-      return res
-        .status(404)
-        .json({ message: "Invalid email or password" });
+      return res.status(404).json({ message: "Invalid email " });
     }
     const passwordMatch = await bcrypt.compare(password, userData.password);
     if (!passwordMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid password" });
     }
 
     if (!userData.isActive) {
@@ -41,6 +39,23 @@ exports.login = async (req, res) => {
       message: 'Login Failed, please try again later',
       error: error.message
     })
+  }
+};
+
+// Get current authenticated user
+exports.me = async (req, res) => {
+  try {
+    const currentUserId = req?.user?.userId;
+    if (!currentUserId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await User.findById(currentUserId).select("firstName lastName email phoneNumber role isActive createdDate updatedDate");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.status(200).json({ success: true, user });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to fetch current user", error: error.message });
   }
 };
 exports.register = async (req, res) => {
@@ -99,9 +114,9 @@ exports.updateProfile = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID format" });
     }
 
-    const { firstName, lastName, email, phoneNumber,isActive, role } = req.body;
+    const { firstName, lastName, email, phoneNumber, isActive, role, currentPassword, newPassword } = req.body;
 
-    const updatedFields = { firstName, lastName, email, phoneNumber,isActive, role };
+    const updatedFields = { firstName, lastName, email, phoneNumber, isActive, role };
 
     if (typeof isActive === "boolean") {
       updatedFields.isActive = isActive;
@@ -115,11 +130,25 @@ exports.updateProfile = async (req, res) => {
       (key) => updatedFields[key] == null && delete updatedFields[key]
     );
 
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: userId },
-      updatedFields,
-      { new: true, runValidators: true }
-    );
+    // Handle password update if provided
+    if (newPassword) {
+      const userDoc = await User.findById(userId);
+      if (!userDoc) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (!currentPassword) {
+        return res.status(400).json({ message: "Current password is required to change password" });
+      }
+      const isCurrentValid = await bcrypt.compare(currentPassword, userDoc.password);
+      if (!isCurrentValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hashed = await bcrypt.hash(newPassword, salt);
+      updatedFields.password = hashed;
+    }
+
+    const updatedUser = await User.findOneAndUpdate({ _id: userId }, updatedFields, { new: true, runValidators: true });
 
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
@@ -176,6 +205,16 @@ exports.listUsers = async (req, res) => {
 
   try {
     const { search, page = 1, limit = 3, role } = req.query;
+
+    // Authorization: Only SuperAdmin can list users
+    const currentUserId = req?.user?.userId;
+    if (!currentUserId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const currentUser = await User.findById(currentUserId).select("role");
+    if (!currentUser || currentUser.role !== "SuperAdmin") {
+      return res.status(403).json({ success: false, message: "Forbidden: insufficient permissions" });
+    }
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const perPage = Math.max(1, Math.min(100, parseInt(limit, 10) || 3));
 

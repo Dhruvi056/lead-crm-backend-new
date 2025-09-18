@@ -1,4 +1,5 @@
 const Lead = require("../model/lead");
+const User = require("../model/users");
 
 const getLeads = async (req, res) => {
   try {
@@ -26,6 +27,15 @@ const getLeads = async (req, res) => {
 
     if (status) {
       filter.$and.push({ status: status.toUpperCase() });
+    }
+
+    // Enforce role-based visibility: Admins only see their own leads
+    const currentUserId = req?.user?.userId;
+    if (currentUserId) {
+      const currentUser = await User.findById(currentUserId).select("role");
+      if (currentUser && currentUser.role === "Admin") {
+        filter.$and.push({ userId: currentUserId });
+      }
     }
 
     const total = await Lead.countDocuments(filter);
@@ -118,6 +128,20 @@ const createLead = async (req, res) => {
       });
     }
 
+    // Determine assignment based on current user's role
+    const currentUserId = req?.user?.userId;
+    let assignedUserId = userId;
+    if (currentUserId) {
+      const currentUser = await User.findById(currentUserId).select("role");
+      if (currentUser) {
+        if (currentUser.role === "Admin") {
+          assignedUserId = currentUserId;
+        } else {
+          assignedUserId = userId || currentUserId;
+        }
+      }
+    }
+
     const newLead = await Lead.create({
       email,
       firstName,
@@ -127,7 +151,7 @@ const createLead = async (req, res) => {
       whatsUpNumber,
       status,
       workEmail,
-      userId,
+      userId: assignedUserId,
       priority,
     });
 
@@ -178,6 +202,18 @@ const updateLead = async (req, res) => {
       }
     }
 
+    // Enforce that Admins cannot reassign leads to other users
+    const currentUserIdForUpdate = req?.user?.userId;
+    let enforcedUserId = userId;
+    if (currentUserIdForUpdate) {
+      const currentUserForUpdate = await User.findById(currentUserIdForUpdate).select("role");
+      if (currentUserForUpdate) {
+        if (currentUserForUpdate.role === "Admin") {
+          enforcedUserId = currentUserIdForUpdate;
+        }
+      }
+    }
+
     const updateData = {
       email,
       firstName,
@@ -187,7 +223,7 @@ const updateLead = async (req, res) => {
       whatsUpNumber,
       status,
       workEmail,
-      userId,
+      userId: enforcedUserId,
       priority
     };
 

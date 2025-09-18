@@ -1,11 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const leadController = require("../../controller/lead.controller");
+const verifyToken = require("../../middleware/verifyToken");
 const {
   handleValidation,
   validateLead
 } = require("../../utils/leadValidation")
 
+
+router.use(verifyToken);
 
 router.get("/", leadController.getLeads);
 router.get("/:id", leadController.getLeadById);

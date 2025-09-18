@@ -55,13 +55,7 @@ exports.validateLead = [
         .optional()
         .isIn(["HIGH", "MEDIUM", "LOW"])
         .withMessage("Priority must be one of: HIGH, MEDIUM, LOW"),
-
-    body("userId")
-        .notEmpty()
-        .withMessage("User ID is required")
-        .bail()
-        .isMongoId()
-        .withMessage("Invalid User ID")
+    // userId is derived from token server-side; do not validate input here
 ];
 
 exports.handleValidation = (req, res, next) => {
