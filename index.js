@@ -9,8 +9,8 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:3000", // local dev
-      "https://lead-crm-frontend-new.vercel.app", // frontend deployed on vercel
+      "http://localhost:3000", 
+      "https://lead-crm-frontend-new.vercel.app", 
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
