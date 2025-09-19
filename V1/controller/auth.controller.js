@@ -42,7 +42,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// Get current authenticated user
 exports.me = async (req, res) => {
   try {
     const currentUserId = req?.user?.userId;
@@ -130,7 +129,6 @@ exports.updateProfile = async (req, res) => {
       (key) => updatedFields[key] == null && delete updatedFields[key]
     );
 
-    // Handle password update if provided
     if (newPassword) {
       const userDoc = await User.findById(userId);
       if (!userDoc) {
@@ -206,7 +204,6 @@ exports.listUsers = async (req, res) => {
   try {
     const { search, page = 1, limit = 3, role } = req.query;
 
-    // Authorization: Only SuperAdmin can list users
     const currentUserId = req?.user?.userId;
     if (!currentUserId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
