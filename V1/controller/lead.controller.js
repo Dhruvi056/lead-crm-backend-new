@@ -145,12 +145,12 @@ const createLead = async (req, res) => {
     const newLead = await Lead.create({
       email,
       firstName,
-      websiteURL,
-      linkdinURL,
+      websiteURL: websiteURL || null,
+      linkdinURL: linkdinURL || null,
       industry,
       whatsUpNumber,
       status,
-      workEmail,
+      workEmail: workEmail || null,
       userId: assignedUserId,
       priority,
     });
@@ -217,12 +217,12 @@ const updateLead = async (req, res) => {
     const updateData = {
       email,
       firstName,
-      websiteURL,
-      linkdinURL,
+      websiteURL: websiteURL || null,
+      linkdinURL: linkdinURL || null,
       industry,
       whatsUpNumber,
       status,
-      workEmail,
+      workEmail: workEmail || null,
       userId: enforcedUserId,
       priority
     };

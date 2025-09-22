@@ -14,11 +14,13 @@ const leadSchema = new mongoose.Schema({
     },
     websiteURL: {
         type: String,
-        required: true
+        required: false,
+        default: null
     },
     linkdinURL: {
         type: String,
-        required: true
+        required: false,
+        default: null
     },
     industry: {
         type: String,
@@ -36,7 +38,8 @@ const leadSchema = new mongoose.Schema({
     },
     workEmail: {
         type: String,
-        required: true
+        required: false,
+        default: null
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,

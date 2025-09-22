@@ -15,15 +15,13 @@ exports.validateLead = [
         .withMessage("Valid email is required"),
 
     body("websiteURL")
-        .notEmpty()
-        .withMessage("Website URL is required")
+        .optional({ nullable: true, checkFalsy: true })
         .bail()
         .isURL()
         .withMessage("Valid website URL is required"),
 
     body("linkdinURL")
-        .notEmpty()
-        .withMessage("LinkedIn URL is required")
+        .optional({ nullable: true, checkFalsy: true })
         .bail()
         .isURL()
         .withMessage("Valid LinkedIn URL is required"),
@@ -45,8 +43,7 @@ exports.validateLead = [
         .withMessage("Status must be one of: ACTIVE, INACTIVE"),
 
     body("workEmail")
-        .notEmpty()
-        .withMessage("Work email is required")
+        .optional({ nullable: true, checkFalsy: true })
         .bail()
         .isEmail()
         .withMessage("Enter a valid work email"),
@@ -55,7 +52,13 @@ exports.validateLead = [
         .optional()
         .isIn(["HIGH", "MEDIUM", "LOW"])
         .withMessage("Priority must be one of: HIGH, MEDIUM, LOW"),
-    // userId is derived from token server-side; do not validate input here
+
+    body("userId")
+        .notEmpty()
+        .withMessage("User ID is required")
+        .bail()
+        .isMongoId()
+        .withMessage("Invalid User ID")
 ];
 
 exports.handleValidation = (req, res, next) => {
