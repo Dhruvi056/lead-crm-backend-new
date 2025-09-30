@@ -8,11 +8,27 @@ exports.validateLead = [
         .withMessage("First name must contain only letters"),
 
     body("email")
-        .notEmpty()
-        .withMessage("Email is required")
-        .bail()
-        .isEmail()
-        .withMessage("Valid email is required"),
+        .custom((value) => {
+            if (!Array.isArray(value)) {
+                throw new Error("Email must be an array");
+            }
+
+            if (!value[0] || value[0].trim() === "") {
+                throw new Error("Primary email is required");
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value[0])) {
+                throw new Error("Primary email must be valid");
+            }
+
+            for (let i = 1; i < value.length; i++) {
+                if (value[i] && value[i].trim() !== "" && !emailRegex.test(value[i])) {
+                    throw new Error(`Secondary email at index ${ i } is invalid`);
+                }
+            }
+            return true;
+        }),
 
     body("websiteURL")
         .optional({ nullable: true, checkFalsy: true })

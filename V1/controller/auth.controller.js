@@ -202,7 +202,7 @@ exports.deleteProfile = async (req, res) => {
 exports.listUsers = async (req, res) => {
 
   try {
-    const { search, page = 1, limit = 3, role } = req.query;
+    const { search, page = 1, limit = 10, role } = req.query;
 
     const currentUserId = req?.user?.userId;
     if (!currentUserId) {
@@ -213,7 +213,7 @@ exports.listUsers = async (req, res) => {
       return res.status(403).json({ success: false, message: "Forbidden: insufficient permissions" });
     }
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const perPage = Math.max(1, Math.min(100, parseInt(limit, 10) || 3));
+    const perPage = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
 
     const query = { isDeleted: false };
 
@@ -245,7 +245,7 @@ exports.listUsers = async (req, res) => {
     }))
 
     const totalUsers = await User.countDocuments(query);
-    const totalPages = Math.ceil(totalUsers / limit);
+    const totalPages = Math.ceil(totalUsers / perPage);
 
     return res.status(200).json({
       success: true,

@@ -2,12 +2,16 @@ const mongoose = require("mongoose");
 
 const leadSchema = new mongoose.Schema({
 
-    email: {
-        type: [String],
-        required: true,
-        unique: true,
-        trim: true,
+  email: {
+    type: [String],
+    required: true,
+    validate: {
+      validator: function (arr) {
+        return Array.isArray(arr) && arr.length > 0 && arr[0] && arr[0].trim() !== "";
+      },
+      message: "At least one email is required",
     },
+},
      firstName: {
         type: String,
         required: true

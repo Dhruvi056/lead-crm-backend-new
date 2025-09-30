@@ -3,10 +3,10 @@ const User = require("../model/users");
 
 const getLeads = async (req, res) => {
   try {
-    const { search, userId, status, page = 1, limit = 3 } = req.query;
+    const { search, userId, status, page = 1, limit = 10 } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const perPage = Math.max(1, Math.min(100, parseInt(limit, 3) || 3));
+    const perPage = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
 
     const filter = {
       $and: [
@@ -29,7 +29,6 @@ const getLeads = async (req, res) => {
       filter.$and.push({ status: status.toUpperCase() });
     }
 
-    // Enforce role-based visibility: Admins only see their own leads
     const currentUserId = req?.user?.userId;
     if (currentUserId) {
       const currentUser = await User.findById(currentUserId).select("role");
@@ -70,7 +69,6 @@ const getLeads = async (req, res) => {
   }
 };
 
-// Get single lead by ID
 const getLeadById = async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
@@ -84,7 +82,7 @@ const getLeadById = async (req, res) => {
   }
 };
 
-// Create a new lead
+
 const createLead = async (req, res) => {
   try {
     const {
@@ -100,16 +98,23 @@ const createLead = async (req, res) => {
       priority,
     } = req.body;
 
-    const emailArray = Array.isArray(email) ? email : [email];
 
     if (!firstName) {
       return res.status(400).json({ success: false, message: "First Name is required" });
     }
-    if (!email || email.length === 0) {
-      return res.status(400).json({ success: false, message: "At least one email is required" });
-    }
+
     if (!whatsUpNumber) {
       return res.status(400).json({ success: false, message: "WhatsApp number is required" });
+    }
+    let emailArray = [];
+    if (Array.isArray(email)) {
+      emailArray = email.map((e) => (e && e.trim() !== "" ? e.trim() : null));
+    } else if (email && email.trim() !== "") {
+      emailArray = [email.trim()];
+    }
+
+    if (!emailArray[0]) {
+      return res.status(400).json({ success: false, message: "Primary email is required" });
     }
 
     const leadByEmail = await Lead.findOne({ email: { $in: email } });
@@ -128,7 +133,6 @@ const createLead = async (req, res) => {
       });
     }
 
-    // Determine assignment based on current user's role
     const currentUserId = req?.user?.userId;
     let assignedUserId = userId;
     if (currentUserId) {
@@ -170,11 +174,9 @@ const createLead = async (req, res) => {
   }
 };
 
-// Update lead
 const updateLead = async (req, res) => {
   try {
     const leadId = req.params.id;
-
     const {
       email,
       firstName,
@@ -185,37 +187,53 @@ const updateLead = async (req, res) => {
       status,
       workEmail,
       userId,
-      priority
+      priority,
     } = req.body;
-
-    if (email) {
-      const existingLead = await Lead.findOne({
-        email: email,
+ 
+    let emailArray = [];
+    if (Array.isArray(email)) {
+      emailArray = email.map((e) => (e && e.trim() !== "" ? e.trim() : null));
+    } else if (email && email.trim() !== "") {
+      emailArray = [email.trim()];
+    }
+ 
+    if (!emailArray[0]) {
+      return res.status(400).json({
+        success: false,
+        message: "Primary email is required",
+      });
+    }
+ 
+    emailArray = [emailArray[0], ...emailArray.slice(1).filter((e) => e)];
+ 
+    const existingLead = await Lead.findOne({
+      email: { $in: emailArray },
+      _id: { $ne: leadId },
+    });
+ 
+    if (existingLead) {
+      return res.status(400).json({
+        success: false,
+        message: `Email already exists with another lead: ${existingLead.email}`,
+      });
+    }
+ 
+    if (whatsUpNumber) {
+      const existingWhatsApp = await Lead.findOne({
+        whatsUpNumber,
         _id: { $ne: leadId },
       });
-
-      if (existingLead) {
+ 
+      if (existingWhatsApp) {
         return res.status(400).json({
           success: false,
-          message: "Email already exists with another lead",
+          message: "Lead with this WhatsApp number already exists",
         });
       }
     }
-
-    // Enforce that Admins cannot reassign leads to other users
-    const currentUserIdForUpdate = req?.user?.userId;
-    let enforcedUserId = userId;
-    if (currentUserIdForUpdate) {
-      const currentUserForUpdate = await User.findById(currentUserIdForUpdate).select("role");
-      if (currentUserForUpdate) {
-        if (currentUserForUpdate.role === "Admin") {
-          enforcedUserId = currentUserIdForUpdate;
-        }
-      }
-    }
-
+ 
     const updateData = {
-      email,
+      email: emailArray,
       firstName,
       websiteURL: websiteURL || null,
       linkdinURL: linkdinURL || null,
@@ -223,23 +241,23 @@ const updateLead = async (req, res) => {
       whatsUpNumber,
       status,
       workEmail: workEmail || null,
-      userId: enforcedUserId,
-      priority
+      userId,
+      priority,
+      updatedDate: Date.now(),
     };
-
-    const updatedLead = await Lead.findByIdAndUpdate(
-      leadId,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
+ 
+    const updatedLead = await Lead.findByIdAndUpdate(leadId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+ 
     if (!updatedLead) {
       return res.status(404).json({
         success: false,
         message: "Lead not found",
       });
     }
-
+ 
     res.status(200).json({
       success: true,
       message: "Lead updated successfully",
@@ -249,12 +267,13 @@ const updateLead = async (req, res) => {
     console.error("Error updating lead:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update lead", error: error.message,
+      message: "Failed to update lead",
+      error: error.message,
     });
   }
 };
 
-// Delete lead
+
 const deleteLead = async (req, res) => {
   try {
     const leadId = req.params.id;
