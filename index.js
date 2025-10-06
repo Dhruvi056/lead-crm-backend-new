@@ -18,7 +18,6 @@ app.use(
   })
 );
 
-// Additional CORS headers for production
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -32,7 +31,7 @@ app.use((req, res, next) => {
   }
 });
 
-app.use(express.json());
+app.use(express.json());8     
 app.use(express.urlencoded({ extended: true }));
 
 (async () => {
@@ -41,15 +40,15 @@ app.use(express.urlencoded({ extended: true }));
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("✅ MongoDB Connected");
+    console.log(" MongoDB Connected");
   } catch (error) {
-    console.error("❌ MongoDB Connection Error:", error.message);
+    console.error(" MongoDB Connection Error:", error.message);
     process.exit(1);
   }
 })();
 
 app.get("/", (req, res) => {
-  res.send("API working fine 🚀");
+  res.send("API working fine ");
 });
 
 require("./V1/model");
@@ -57,6 +56,6 @@ app.use(require("./V1/router"));
 
 app.listen(process.env.APP_PORT || 5000, () => {
   console.log(
-    `🚀 Server running at http://localhost:${process.env.APP_PORT || 5000}`
+    ` Server running at http://localhost:${process.env.APP_PORT || 5000}`
   );
 });
