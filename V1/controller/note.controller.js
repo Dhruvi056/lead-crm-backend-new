@@ -40,15 +40,17 @@ const createNote = async (req, res) => {
 const getNotesByLead = async (req, res) => {
   try {
     const { leadId } = req.params;
-    const { search } = req.query; 
+    const { search } = req.query;
+
     let query = { leadId };
+
     if (search && search.trim() !== "") {
       query.content = { $regex: search.trim(), $options: "i" };
     }
 
     const notes = await Note.find(query)
-      .populate("userId", "firstName email")
-      .sort({ createdAt: -1 });
+      .populate("userId", "firstName email") 
+      .sort({ createdAt: -1 }); 
 
     res.status(200).json({
       success: true,
@@ -73,7 +75,6 @@ const updateNote = async (req, res) => {
       return res.status(400).json({ success: false, message: "Note content is required" });
     }
 
-    //  use cleanNoteId here
     const note = await Note.findById(cleanNoteId);
     if (!note) {
       return res.status(404).json({ success: false, message: "Note not found" });
